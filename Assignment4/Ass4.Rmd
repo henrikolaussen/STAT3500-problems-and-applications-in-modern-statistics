@@ -1,0 +1,575 @@
+---
+title: "Assignment 4"
+author: "Henrik Olaussen"
+date: "2023-10-24"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(openintro)
+library(MASS)
+library(sandwich)
+library(lmtest)
+library(carData)
+library(bestglm)
+library(glmnet)
+data("age_at_mar")
+data("gss2010")
+data("Mroz")
+data("Arrests")
+```
+
+## Problem 1
+
+load data:
+```{r}
+data1 = age_at_mar
+Y = age_at_mar$age
+```
+
+
+### a) 
+
+Here is a historgram of the data:
+
+```{r}
+hist(Y,probability = TRUE)
+```
+
+The MLEs are given in each code chunk.
+
+First, the Poisson model: 
+```{r}
+pois.model <- fitdistr(Y,'poisson')
+print(pois.model)
+```
+
+
+Geometric:
+```{r}
+geom.model <- fitdistr(Y,'geometric')
+print(geom.model)
+```
+
+
+Negative binomial: 
+```{r}
+negative_bin.model <- fitdistr(Y, 'negative binomial')
+print(negative_bin.model)
+```
+
+### b) 
+
+In the well-specified case, we have that the distribution of the MLE $\mathbf{\hat{\theta}}_n$ is asymptotically normal: 
+
+$$
+\mathbf{\hat{\theta}}_n \overset{A}{\sim} N \left ( \mathbf{\theta}^*, \frac{1}{n} \mathbf{\hat{J}}_n(\mathbf{\hat{\theta}}_n) \right )
+$$
+
+where $\mathbf{\theta}^*$ denotes the risk minimizer, and $$\mathbf{\hat{J}}_n(\mathbf{\theta}_n) = - \left\{ \frac{1}{n}\sum_i^n \frac{\partial^2 f(Y_i \mid \mathbf{X}_i; \mathbf{\theta})}{\partial \mathbf{\theta} \partial \mathbf{\theta}^T} \right\}$$ 
+
+Hence, the 90% CI for the MLE involves the quantiles of the normal distribution. Firstly, for the Poisson model:
+
+```{r}
+alpha_quantile = 1.645
+
+pois.model$estimate + c(-alpha_quantile*pois.model$sd, alpha_quantile*pois.model$sd)
+```
+
+
+Secondly, for the geometric model: 
+```{r}
+geom.model$estimate + c(-alpha_quantile*geom.model$sd, alpha_quantile*geom.model$sd)
+```
+
+
+
+Lastly, the negative binomial model:
+```{r}
+#size
+negative_bin.model$estimate[1] + c(-alpha_quantile*negative_bin.model$sd[1], alpha_quantile*negative_bin.model$sd[1])
+
+#mu 
+negative_bin.model$estimate[2] + c(-alpha_quantile*negative_bin.model$sd[2], alpha_quantile*negative_bin.model$sd[2])
+```
+
+
+### b)
+
+AIC and BIC for the models.
+
+Poisson model:
+```{r}
+AIC(pois.model)
+BIC(pois.model)
+```
+
+Geometric model:
+```{r}
+AIC(geom.model)
+BIC(geom.model)
+```
+
+Negative binomial:
+```{r}
+AIC(negative_bin.model)
+BIC(negative_bin.model)
+```
+
+We are looking for the smallest AIC/BIC. The AIC and BIC are two information criteria, both involving penalty terms to avoid overfitting. Normally, AIC tends to overfit the models more than the BIC, as the BIC penalizes overfitting more. As n approaching infinity, BIC converges in probability to the true model. This is not true for the AIC. Furthermore, the Poisson model is the model with the smallest BIC and AIC. Hence, one would choose the Poisson model. 
+
+### c) 
+
+Moreover, we can fit continous models as well, supposing that age is continous.  
+
+Firstly, the exponential model:
+```{r}
+exp.model <- fitdistr(Y,'exponential')
+print(exp.model)
+```
+
+Secondly, gamma model:
+```{r}
+gamma.model <- fitdistr(Y,'gamma')
+print(gamma.model)
+```
+
+Lastly, the log-normal model:
+```{r}
+log_normal.model <- fitdistr(Y,'log-normal')
+print(log_normal.model)
+```
+
+Furthermore, we can fit 90% CIs to each of the estimated parameters. 
+
+For the exponential model: 
+```{r}
+exp.model$estimate + c(-alpha_quantile*exp.model$sd, alpha_quantile*exp.model$sd)
+```
+
+For the gamma model:
+```{r}
+#shape-parameter
+gamma.model$estimate[1] + c(-alpha_quantile*gamma.model$sd[1], alpha_quantile*gamma.model$sd[1])
+
+#rate
+gamma.model$estimate[2] + c(-alpha_quantile*gamma.model$sd[2], alpha_quantile*gamma.model$sd[2])
+```
+
+For the log-normal:
+```{r}
+#mean log
+log_normal.model$estimate[1] + c(-alpha_quantile*log_normal.model$sd[1], alpha_quantile*log_normal.model$sd[1])
+
+#standard deviation log
+log_normal.model$estimate[2] + c(-alpha_quantile*log_normal.model$sd[2], alpha_quantile*log_normal.model$sd[2])
+```
+
+### d)
+
+Next, the AIC and BIC of the continous models. 
+Firstly, the exponential model:
+```{r}
+AIC(exp.model)
+BIC(exp.model)
+```
+
+Gamma-model:
+```{r}
+AIC(gamma.model)
+BIC(gamma.model)
+```
+
+log-normal:
+```{r}
+AIC(log_normal.model)
+BIC(log_normal.model)
+```
+
+The log-normal model is the model with the smallest AIC and BIC. Hence, this is the best model amoung the continous models, according to AIC and BIC. Compared to the AIC and BIC of the discrete models, the log-normal has the overall smallest AIC and BIC values. 
+
+### e) 
+
+Moreover, we can calculate the 90% CI's under misspecification for the best models from b) and d). Thus, we use the Poisson model and the log-normal model. Under misspecification, we make use of the sandwich covariance estimator to get hold of the standard errors. In other words, we have to find an estimate for  $A^{-1}BA^{-1}$ (under correct specification we have $A^{-1} = - B$). $B$ is given by: 
+
+$$
+\hat{B}_{n}=\frac{1}{n}\sum_{i=1}^{n}\left\{ \partial_{\theta} \log f\left(Y_{i};\therefore \right)\right\} \left\{ \partial_{\theta} \log f\left(Y_{i};\therefore \right)\right\} ^{\top}
+$$
+
+Sandwich estimator for the poisson model is calculated below: 
+```{r}
+library(numDeriv)
+# Set up log likelihood function
+logf_pois <- function(para,obs) {
+  dpois(Y[obs], lambda = para,log=TRUE) 
+}
+
+B_est.pois <- matrix(0,1,1) 
+for (ii in 1:pois.model$n) {
+  Grad <- grad(logf_pois, pois.model$estimate, obs=ii) 
+  B_est.pois <- B_est.pois + Grad%*%t(Grad)  
+}
+
+# scale Best
+B_est.pois <- B_est.pois/pois.model$n
+
+#sandwich estimator:
+Ainv.pois <- pois.model$n*pois.model$vcov
+sandwich.pois <-  Ainv.pois%*%B_est.pois%*%Ainv.pois
+```
+
+Thus, we have that the 90% CI for the MLE of lambda is (we have asymptotic normality also for the case where with the sandwich estimator): 
+```{r}
+se.pois <- sqrt(diag(sandwich.pois)/pois.model$n)
+pois.model$estimate + c(-alpha_quantile * se.pois, alpha_quantile * se.pois)
+```
+
+Furthermore, we do the same calculation for the log-normal model: 
+```{r}
+logf_lognorm <- function(para,obs) {
+  dlnorm(Y[obs], meanlog = para[1], sdlog = para[2],log=TRUE) 
+}
+
+
+B_est.lognorm <- matrix(0,2,2) 
+for (ii in 1:log_normal.model$n) {
+  Grad <- grad(logf_lognorm, log_normal.model$estimate, obs=ii) 
+  B_est.lognorm <- B_est.lognorm + Grad%*%t(Grad)  
+}
+
+# scale Best
+B_est.lognorm <- B_est.lognorm/log_normal.model$n
+
+#sandwich estimator:
+Ainv.lognorm <- log_normal.model$n*log_normal.model$vcov
+sandwich.lognorm <-  Ainv.lognorm%*%B_est.lognorm%*%Ainv.lognorm
+```
+
+The 90% CI:
+```{r}
+se.lognorm <- sqrt(diag(sandwich.lognorm)/log_normal.model$n)
+
+#for the meanlog
+log_normal.model$estimate[1] + c(-alpha_quantile * se.lognorm[1], alpha_quantile * se.lognorm[1])
+
+#for the sdlog
+log_normal.model$estimate[2] + c(-alpha_quantile * se.lognorm[2], alpha_quantile * se.lognorm[2])
+```
+
+## Problem 2
+
+```{r}
+data2 <- na.omit(gss2010)
+```
+
+### a) 
+
+Firstly, the mean of the logistic model is characterized by the logistic function: 
+
+$$\pi_\textbf{x} = \mu(\beta_0 + \mathbf{\beta}^T\textbf{x}) = \frac{\text{exp}(\beta_0 + \mathbf{\beta}^T\textbf{x})}{1+\text{exp}(\beta_0 + \mathbf{\beta}^T\textbf{x})}$$
+where $\mathbf{\beta}^T = [\beta_0, \beta_{\text{hrsrelax}}, \beta_{\text{mentlhlth}}, \beta_{\text{hrs}},  \beta_{\text{degree}}]^T$
+
+Thus, the pmf is: 
+
+$$
+f \left ( y \mid \textbf{x}, \underline{\mathbf{\beta}} \right ) = \left \{ \frac{\text{exp}(\beta_0 + \mathbf{\beta}^T\textbf{x})}{1+\text{exp}(\beta_0 + \mathbf{\beta}^T\textbf{x})} \right \}^{y} \left \{ \frac{1}{1+\text{exp}(\beta_0 + \mathbf{\beta}^T\textbf{x})} \right \}^{1-y} 
+$$
+
+with the given coefficient vector $\mathbf{\beta}$. 
+
+### b) 
+
+```{r}
+logistic_glm <- glm(grass ~ ., data = data2, family = binomial(link = "logit"))
+
+summary(logistic_glm)
+```
+
+```{r}
+unique(data2$degree)
+```
+
+Since degree is a categorical variable, R calculates a coefficient for each of the categories, with Bachelor as base reference category. The degreeBachelor estimate is thus given in the intercept. Furthermore, we can calculate 90% asymptotic CIs for the estimated coefficients. This can be done trough the function coefci(). Since we do not know if the model is misspecified, vcov = sandwich is used:
+
+```{r}
+alpha = 0.1
+coefci(logistic_glm, vcov = sandwich, level = 1-alpha)
+```
+
+### c) 
+
+First, we fit the model with degree as the only covariate as our null model. 
+```{r}
+null_model = glm(grass ~ degree, data = data2, family = binomial(link = "logit"))
+
+summary(null_model)
+```
+
+The test can be performed using waldtest(): 
+
+```{r}
+waldtest(null_model, logistic_glm, vcov = sandwich)
+```
+
+Our p-value is large. As a result, there is no evidence that we can reject the null model. Hence, the model with degree as the only covariate might be statistically better than the model from b). 
+
+Furthermore, we can create a simultaneous 99% confidence set. In order to do this, we can use the bonferroni correction, as done below. 
+```{r}
+m = 4
+alpha_star = 0.01
+
+coefci(null_model, vcov = sandwich, level = 1-alpha_star/m)
+```
+
+
+### d)
+
+Moreover, we can look at the AIC and BIC to find the best model. Below is the AIC and BIC of the null model:
+```{r}
+AIC(null_model)
+BIC(null_model)
+```
+
+And the full model:
+```{r}
+AIC(logistic_glm)
+BIC(logistic_glm)
+```
+
+
+Both values are smaller for the reduced model. Hence, according to the AIC and BIC, the best fit is the reduced model. This is the same result as our previous hypothesis test. 
+
+
+### e) 
+
+Till now, the logit mean function has been used. Now we can consider whether the logistic mean function (logit) is better than e.g. the probit link function which has the mean function given below ($\Phi$ is the cumulative Gaussian distribution):
+
+$$
+\text{E}\left[Y|X=x_4\right]=\Phi\left(\beta_{0}+\beta_{\text{degree}}x_4\right) = \int^{\beta_{0}+\beta_{\text{degree}}x_4}_{-\infty} \frac{1}{\sqrt{2\pi}}\text{exp}(-\frac{1}{2}t^2)dt
+$$
+where $\beta_\text{degree}x_4 = \beta_{\text{degreeGRADUATE}}$ if $x_4$ is related to the category graduate etc. 
+
+Moreover, the fitted model can be seen below: 
+```{r}
+probit <- glm(grass ~ degree, data = data2, family = binomial(link = "probit"))
+
+summary(probit)
+```
+
+AIC and BIC for the probit-model:
+```{r}
+AIC(probit)
+BIC(probit)
+```
+
+For the logit-model:
+```{r}
+AIC(null_model)
+BIC(null_model)
+```
+
+The AIC and BIC are equal for both models. Moreover, using the logit model as reference, the coefficient values states how likely it is for a given person to vote legal/not legal relative to a person with a bachelors degree (included in the intercept). A negative value means that a person is less likely to vote for legal than someone with a bachelor's degree, while a positive value states that the person is more likely to vote legal. Since the coefficients in a logit-model is related to the mean-function given earlier, the value of $\text{exp}(\beta_j)$ is known as the odds-ratio. E.g. an odds ratio of $\text{exp}(\beta_\text{degreeHIGHSCHOOL}) = \exp(0.11817) = 1.125$ means that a person with only a high school degree is 1.125 times more likely to vote for legal than someone with a bachelors degree. 
+
+
+## Problem 3
+
+### a)
+
+There is one value that is below 0. This is not possible for a gamma distribution, so this row is removed from the dataset. Moreover, the link = "identity" gives the desired mean model $$\mu(x) = \text{exp}(x)$$
+
+```{r}
+data3 = Mroz
+
+for (i in 1:length(Mroz$inc)) { #remove the negatice row 
+  if(Mroz$inc[i] < 0) {
+    data3 = data3[-i,]
+  }
+}
+
+gamma_model <- glm(inc ~., data = data3, family = Gamma(link = "identity"))
+```
+
+Moreover, we can give individual asymptotic 90% confidence intervals for each parameter. In case the model is misspecified, we use the sandwich estimator. 
+
+```{r}
+coefci(gamma_model, vcov = sandwich, level = 1-alpha)
+```
+
+In addition, we can test the null hypothesis that $Y$ is independent of the covariates vs the alternative that $Y$ is dependent on the covariates.
+```{r}
+waldtest(gamma_model, vcov = sandwich)
+```
+
+The p-value is very low, meaning that there is evidence against the null hypothesis. Hence, the conclusion of the test is that $Y$ is dependent on some of the covariates. 
+
+### b) 
+
+Furthermore, one can use the function bestglm() to find the model with the best AIC.
+```{r}
+Xy <- as.data.frame(c(data3)) 
+
+bestmodel_AIC <- bestglm(Xy, family = Gamma(link = "inverse"), IC = "AIC")
+
+bestmodel_AIC
+```
+
+One can also use BIC to find the best model:
+```{r}
+bestmodel_BIC <- bestglm(Xy, family = Gamma(link = "inverse"), IC = "BIC")
+
+bestmodel_BIC
+```
+
+One can see that the optimal BIC gives a model with fewer coefficients than the optimal AIC. This isexpected as the BIC penalizes larger model more than the AIC. Furthermore, we can create an asymptotic simultanous 90% confidence sets for the two models. Like before, the bonferroni update can be used. The corrections are done below: 
+
+```{r}
+alpha_star_2 = 0.1
+#AIC model 
+m_AIC = 6
+
+alpha_AIC = alpha_star_2/m_AIC
+
+#BIC model
+m_BIC = 4 
+
+alpha_BIC = alpha_star_2/m_BIC
+```
+
+We get the following two simultanous 90% confidence sets: 
+
+```{r}
+#AIC
+coefci(bestmodel_AIC$BestModel, level = 1-alpha_AIC)
+```
+
+```{r}
+#BIC
+coefci(bestmodel_BIC$BestModel, level = 1-alpha_BIC)
+```
+
+## Problem 4
+
+### a)
+
+Fit the data:
+```{r}
+data4 = Arrests
+
+logistic_glm_2 <- glm(released ~., data = data4, family = binomial(link = "logit"))
+
+summary(logistic_glm_2)
+```
+
+Perform the test:
+```{r}
+waldtest(logistic_glm_2, vcov = sandwich)
+```
+
+The p-value is very small, hence there is strong evidence that we can reject the null hypothesis, meaning that the there is strong evidence that the model is dependent on some of the covariates. 
+
+The estimated mean is: 
+$$ \mu (\theta^T\textbf{x}) = \frac{\text{exp}(\theta^T\textbf{x})}{1 + \text{exp}(\theta^T\textbf{x})}$$
+Where $\theta = [\beta_0, \beta_{\text{colourWhite}},..,\beta_{\text{checks}}]$. $\textbf{x}$ decides whether we have a person that is female/male, black/white, employed or not, etc. 
+
+### b) 
+
+Finding a subset of covariates with respect to BIC:
+```{r}
+X = data4[2:8]
+Y = data4[1]
+
+Xy_2 = cbind(X,Y)
+best_BIC_2 <-bestglm(Xy_2, family = binomial(link = "logit"), IC = "BIC")
+
+best_BIC_2
+```
+
+The model with the optimal BIC is shown above. 
+
+### c) 
+
+Furthermore, regularization can be applied for best model selection. Two methods are LASSO and Elastic net. Both methods makes use of a penalty on the coefficients. In both cases, the parameter lambda chooses how much we penalize the coefficients. By using the glmnet-function, we can try different values of lambda to find the best model. Firstly, we use the LASSO. 
+
+```{r}
+#model.matrix to fix the categorical variables
+xx <- model.matrix(released ~., data = data4)[,-1]
+yy <- data4$released
+lasso <- glmnet(x = xx, y = yy, family = binomial(link = "logit"), standardize = FALSE, alpha=1) 
+
+plot(lasso,
+     xvar='lambda',
+     lwd=2,
+     label = TRUE,
+     cex = 3)
+```
+Secondly, Elastic net:
+```{r}
+elastic_net <- glmnet(x = xx, y = yy, family = binomial(link = "logit"), standardize = FALSE, alpha=0.5) 
+
+plot(elastic_net,
+     xvar='lambda',
+     lwd=2,
+     label = TRUE,
+     cex = 3)
+```
+
+### d)
+
+Next, we want to find our optimal lambda values. This can be done through cross validation in the cv.glmnet()-function. 
+```{r}
+#for the lasso 
+lasso_cv <- cv.glmnet(x = xx, y = yy,
+                      family = binomial(link = "logit"),
+                      standardize = FALSE,
+                      type.measure = 'deviance',
+                      alpha=1,
+                      nfold=5)
+
+lasso_best <- glmnet(x = xx, y = yy, family = binomial(link = "logit"), standardize = FALSE, lambda = lasso_cv$lambda.min, alpha=1)
+
+lasso_best$beta
+```
+
+
+```{r}
+#for the elastic net
+elastic_net_cv <- cv.glmnet(x = xx, y = yy,
+                      family = binomial(link = "logit"),
+                      standardize = FALSE,
+                      type.measure = 'deviance',
+                      alpha=0.5,
+                      nfold=5)
+
+elastic_net_best <- glmnet(x = xx, y = yy, family = binomial(link = "logit"), standardize = FALSE, lambda = elastic_net_cv$lambda.min, alpha=0.5)
+
+elastic_net_best$beta
+```
+
+In the code chunks above, cross validation has been used to find the optimal value of lambda. This is the value of lambda that minimize the MSE. One can see that the in the two resulting best models, the same covariates has been removed. However, the estimated coefficient-values are slightly different. Moreover, the mean functions are given below. Note that  $\hat{\theta}$ holds the same coefficients for both models (but not the same values to each coefficient of course).
+
+
+$$
+\mu(\hat{\theta}^{\text{(Lasso)T}}_{\lambda,n}\textbf{x}) = \frac{\text{exp}(\hat{\theta}^{\text{(Lasso)T}}_{\lambda,n}\textbf{x})}{1 + \text{exp}(\hat{\theta}^{\text{(Lasso)T}}_{\lambda,n}\textbf{x})}
+$$
+
+$$
+\mu(\hat{\theta}^{\text{(E.net)T}}_{\lambda,n}\textbf{x}) = \frac{\text{exp}(\hat{\theta}^{\text{(E.net)T}}_{\lambda,n}\textbf{x})}{1 + \text{exp}(\hat{\theta}^{\text{(E.net)T}}_{\lambda,n}\textbf{x})}
+$$
+
+### e)
+
+Lastly, we can draw inference about the parameters found to be non-zero through lasso and elastic-net by fitting the refitting the models and conducting t-tests. Here, the models are likely to be misspecified so we use the sandwich covariance estimator.  
+
+```{r}
+glm_refit <- glm(released ~., data = data4[,-which(lasso_best$beta==0)-1], family = binomial(link = "logit")) 
+
+# Output misspecification adjusted tests
+coeftest(glm_refit,vcov=sandwich)
+```
+
+Firstly, one can observe that the values of the coefficients in the refitted model are slightly larger than those of lasso/elastic net. This is as expected because of the penalization used in the regularization methods. Moreover, all p-values are rather small except the value of age, indicating that this covariate is not significant to the model. However, this could be because of multicollinearity, meaning that age is highly correlated with another covariates in our refitted model. Consequently, age might be significant, but due to correlation, this is not visible through the test above. 
+

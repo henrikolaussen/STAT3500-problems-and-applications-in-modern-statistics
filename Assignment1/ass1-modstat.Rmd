@@ -1,0 +1,267 @@
+---
+title: "Assignment 1 - Modern Statistics"
+author: "Henrik Olaussen"
+date: "2023-08-25"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mclust) #gaussian mixture models 
+library(ggplot2)
+library(GGally)
+library(siqr)
+```
+
+### a) 
+
+##### (i)
+The EM algorithm is an iterative method used to calculate the maximum likelihood estimates (MLE). Often, the algorithm is used for incomplete-data problems. We denote $\textbf{w}$ as the observed data ($w_1,...,w_n$), $\textbf{x}$ as the complete data and $\textbf{z}$ as the additional (or missing) data such that $\textbf{x} =( \textbf{w}^T,\textbf{z}^T)^T$. Moreover, we want to estimate the unknown parameters contained in the vector $\Psi$ by maximum likelihood. The EM algorithm makes use of the complete-data log likelihood function:
+
+$$
+\text{log}L_c(\Psi) = \text{log}g_c(\textbf{x}; \Psi)
+$$
+Where $g$ is the pdf of the observed random sample $\textbf{x}_1,..\textbf{x}_n$ from the random vector $\textbf{X}$, corresponding to the complete data vector. 
+
+##### (ii)
+However, $L_c(\Psi)$ is unobservable. Hence we use the conditional expectation given $\textbf{w}$ instead, such that we have a function of $\textbf{w}$. This leads to the E-step:
+
+$$
+Q(\Psi; \Psi^{(k)}) = E_{\Psi^{(k)}} [\text{log}L_c(\Psi) \mid \textbf{w}]
+$$
+
+Furthermore, after computing the E-step for the current parameter updates (k+1), the EM algorithm maximizes this update. We want to find the values of $\Psi^{(k+1)}$ that optimizes the likelihood function: 
+
+$$
+\Psi^{(k+1)} = \text{argmax}Q(\Psi;\Psi^{(k)})
+$$
+
+##### (iii)
+Now, we want to fit the EM-algorithm to the given two-component normal mixture model with common variances to our n = 75 observations. Firstly, we load dataset 1:
+```{r}
+setwd("/Users/henrikolaussen/Desktop/Modern-stat/Assignments/Assignment1")
+
+data1 <- read.csv('Data_A1a_v2.csv', header = TRUE)
+```
+
+Secondly, the Mclust-package is used to fit the model with the EM-algorithm: 
+```{r}
+mod1 <- Mclust(data = data1$x, G = 2, modelNames = 'E') #modelNames = 'E' means equal variance. 
+
+mod1.mu <- as.data.frame(mod1$parameters$mean)$`mod1$parameters$mean`
+
+mod1.proportions <- mod1$parameters$pro
+
+mod1.variance <- mod1$parameters$variance$sigmasq
+```
+
+The parameter values are: 
+```{r}
+mod1.mu
+
+mod1.proportions
+
+mod1.variance
+```
+
+
+Below is a plotting of the density of the normal mixture model. 
+```{r}
+plot(mod1, what = "density")
+```
+
+Moreover, the mclust-function initializes the EM-algorithm by hierarchical model-based agglomerative clustering, which can be found in the hc()-function. By default for the multivariate case, a hierarchical agglomerative clustering tree is computed through the hc()-function, whereas the result is used as initialization of the EM-algorithm. In the univariate case, quantiles are used as a default initialization. On the other hand, the hc() function can be called as well, with modelName equal 'V' or 'E', depending on the variance of the model. The function call of hc() would then be as below: 
+
+```{r}
+hc_init <- hc(data1$x, modelName = 'E')
+hc_init
+```
+
+
+For the stopping criterion, the default value is used since the stopping criterion was not specified in the fitting of the model above. From the emControl, the relative convergence tolerance for the log-likelihood is, by default, 1.e-5. 
+
+
+##### (iv)
+Furthermore, we want to divide our data into bins and then plot the resulting histogram in the same plot as the density. The number of bins is determined through the following formula: $n = 2^{N-1} \implies N = \text{log}(n)/\text{log}(2) + 1 \approx 7$ bins.  
+
+
+```{r}
+N_bins = 7 #number of bins in histogram
+max_data = max(data1$x)
+min_data = min(data1$x)
+
+breaks = seq(from = min_data, to = max_data, length.out = N_bins+1)
+
+dens = mod1.proportions[1] * dnorm(data1$x, mean = mod1.mu[1], sd = mod1.variance) + mod1.proportions[2] * dnorm(data1$x, mean = mod1.mu[2], sd = mod1.variance)
+
+hist(data1$x, breaks = breaks, prob = TRUE, ylim = c(0, 0.6))
+points(data1$x, dens)
+```
+
+One can also plot the histogram and density through ggplot. However, using ggplot, the density is different from the model fitted above:
+
+```{r}
+df = data.frame(x = data1$x, dens = dens)
+ggplot(df) + geom_histogram(breaks = breaks, aes(x = data1$x, y = ..density..), color = "black", fill = "lightgreen") + geom_density(aes(x=data1$x, y = ..density..))
+```
+
+
+##### (v) 
+Furthermore, one can carry out a chi-squared goodness-of-fit test. Doing this, we test the adequacy of the fit of the fitted model. In a Chi-squared goodness-of-fit test, we test: <br>
+$H_0$: There is no significant difference between the observed value and the expected distribution. <br>
+$H_1$: There is a significant difference. <br>
+
+The test statistic is: 
+
+$$
+Q = \sum_{j=1}^N (o_j - e_j)^2/e_j \sim \chi_{N-1-d}^2 \quad \text{under } H_0: W \sim F_{\Psi}
+$$
+where $d$ = dim$(\Psi)$ and $F_{\Psi}$ is the corresponding distribution of our two-component normal mixture model with density $f(w; \Psi)$. $o_j$ denotes the number of observations in the j'th interval, and $e_j$ denotes the estimated expected frequencies for the N intervals. $(a_j, b_j), j = 1,..,n$ are the boundaries of the j'th interval. We have:  
+
+$$
+e_j \approx n (F(b_j; \hat{\Psi})-F(a_j;\hat{\Psi})) \quad j= 1,..,N
+$$
+Where:
+
+$$
+F(t; \hat{\Psi}) = \int_{-\infty}^t f(w; \hat{\Psi})dt
+$$
+The test is carried out in the following code-chunk: 
+```{r}
+N = 7
+n = 75
+d = 4 #number of parameters to be estimated, dim(Psi)
+
+e = list()
+o = list()
+
+dens_func <- function(x) {
+  mod1.proportions[1] * dnorm(x, mean = mod1.mu[1], sd = mod1.variance) + mod1.proportions[2] * dnorm(x, mean = mod1.mu[2], sd = mod1.variance)
+}
+
+Q = 0 
+for (i in 1:N) {
+  o[[i]] <- length(data1$x[data1$x >= breaks[i] & data1$x <= breaks[i+1]])
+  e[[i]] <- n * (integrate(dens_func, -Inf, breaks[i+1])$value - integrate(dens_func, -Inf, breaks[i])$value)
+  Q = Q + (o[[i]]-e[[i]])^2 / e[[i]]
+}
+
+p_val <- 1 - pchisq(Q, df = N-1-d)
+
+print(p_val)
+```
+
+The p-value is given above. By using the significance level 0.05, the conclusion of the test is that there are no evidence to discard $H_0$. This means that the observed data is consistent with the fitted two-component normal mixture model. 
+
+##### (vi)
+
+Now the problem is expanded to the case where the component variances are arbitrary, meaning they are no longer equal. The new model is fitted and plotted below: 
+```{r}
+mod2 <- Mclust(data = data1$x, G = 2, modelNames = "V") #V means unequal variances. 
+plot(mod2, what = "density")
+```
+
+The estimated parameter values from the fitted model: 
+```{r}
+mod2$parameters
+```
+
+
+#### (vi)
+Non-parametric bootstrap is applied below to decide the standard errors of the estimated values in 'mod2':
+```{r}
+np_se = MclustBootstrap(mod2, nboot=100, type="bs")
+summary(np_se)
+```
+
+#### (vii)
+Moreover, we can also apply the parametric bootstrap to decide the standard errors:
+```{r}
+p_se = MclustBootstrap(mod2, nboot = 2, type = 'pb')
+
+summary(p_se, what="se")
+```
+
+By comparing the two bootstrapping approaches above, we see that the bound of the parametric bootstrap is tighter than the bound of the non-parametric bootstrap. 
+
+### b) 
+
+##### (i)
+
+Now, we want to fit and plot the normal mixture models with g = 1, g = 2 and g = 3 for a different dataset. The new dataset is loaded in the code-chunk below:
+```{r}
+data2 <- read.csv('Data_A1b.csv', header = TRUE)
+```
+
+Then we fit the three different models: 
+```{r}
+mixture_g1 = Mclust(data = data2[2:5], G = 1, modelNames = "EEE")
+mixture_g2 = Mclust(data = data2[2:5], G = 2, modelNames = "EEE")
+mixture_g3 = Mclust(data = data2[2:5], G = 3, modelNames = "EEE")
+```
+
+The parameters from the three models are: 
+
+##### Model with g = 1:
+```{r}
+mixture_g1$parameters
+```
+
+
+##### Model with g = 2: 
+```{r}
+mixture_g2$parameters
+```
+
+
+##### Model with g = 3: 
+```{r}
+mixture_g3$parameters
+```
+
+Furthermore, we can plot the result of g = 2 and g = 3.
+
+g = 2 plot: 
+```{r}
+plot(mixture_g2, what = "classification")
+```
+
+g = 3 plot:
+```{r}
+plot(mixture_g3, what = "classification")
+```
+
+
+##### (ii) 
+
+Next, the test H0: g = 1 vs H1: g = 2, is performed by bootstrapping the LRTS. This is done below: 
+
+```{r}
+LRT_test = mclustBootstrapLRT(data = data2[2:5], modelName = 'EEE')
+
+LRT_test 
+```
+
+We have that the p-value is below the significance level 0.05. Hence, there are evidence that we can discard H0, meaning that we should go with g = 2. 
+
+##### (iii)
+
+Now, we bootstrap with B=99 bootstrap replications and perform the test $H_0: g = 2$ vs $H_1: g = 3$:
+```{r}
+LRT_test2 = mclustBootstrapLRT(data = data2[2:5], modelName = 'EEE', nboot = 99)
+
+LRT_test2
+```
+
+We have that the p-value is above 0.05. Hence there are no evidence that $H_0$ should be discarded. Hence, with this test, we should go with g = 2, like we did in (ii).  
+
+##### (iv) 
+Lastly, the BIC is used to choose between the models with g=2 and g=3 component normal mixtures.
+```{r}
+BIC_test <- mclustBIC(data = data2[2:5], modelNames = 'EEE')
+plot(BIC_test)
+```
+
+Since we use the mClust package, we choose the model with the maximum BIC value. Normally, one would minimize the BIC. However, mClust uses a different formula, such that we look to maximize the BIC. Furthermore, we choose the modelNames = 'EEE', since we want common covariance matrices. According to the test above, as we want to choose the largest BIC, we see that g = 2 components are favorable to g = 3 components. 

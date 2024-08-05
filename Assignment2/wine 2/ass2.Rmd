@@ -1,0 +1,298 @@
+---
+title: "Assignment 2"
+author: "Henrik Olaussen"
+date: "2023-08-29"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mclust) #gaussian mixture models 
+library(ggplot2)
+library(GGally)
+library(siqr)
+library(EMMIXmfa)
+library(FactoMineR)
+library("devtools")
+
+#install_github("kassambara/factoextra")
+library("factoextra")
+```
+
+## a) 
+
+### (i) 
+
+In a mixture of factors analyzers-model, the distribution of the i'th observation $Y_i$ is modeled by: 
+
+$$
+Y_j = \mu_i + B_i U_{ij} + e_{ij}, \quad i = 1,2,...,g, \quad j = 1,2,...,n
+$$
+
+The final model has the form: 
+
+$$
+f(\mathbf{y}, \Psi) = \sum^g_{i=1} \pi_i\phi(\textbf{y}; \mu_i, \Sigma_i)
+$$
+where:
+$$
+\Sigma_i = B_i B_i^T + D_i
+$$
+In our case, we are going to fit models with g = 3 components and q = 1,2,3,4,5 and 6 factors. In the output from the 6 different mfa models, mu_i holds the values of the i'th component mean. The pi_i-values are the mixture proportions $\pi_i$, and B holds the factor loading contained in the matrix $B \in \mathbb{R}^{p \times q}$ from the model above. Lastly, "diag D" holds the values on the diagonal matrix $D$, where $D_i$ give the variance of the different $e_{ij}$ ($i = 1,2,..,g$), respectively. $U_{ij} \in \mathbb{R}^q$ holds the factors. 
+
+### (ii) 
+
+On the other hand, we have the MCFA model. The MCFA approach provides a greater reduction in the number of parameters compared to MFA. In this case, we fit the usual model $f(\textbf{y}, \Psi)$, but with the following restrictions: 
+
+$$
+\mathbf{ \mu }_i = A \mathbf{\xi}_i
+$$
+and 
+
+$$
+\Sigma_i = A\Omega_iA^T + D
+$$
+
+where $A \in \mathbb{R}^{p \times q}$, $\xi \in \mathbb{R}^q$ (xi_i in the mcfa output), $\Omega_i \in \mathbb{R}^{q \times q}$ and $D \in \mathbb{R}^{p \times p}$. $\Omega_i$ is a positive definite symmetric matrix, and $D$ a diagonal matrix. $A$ holds the loadings on the q unobservable factors.  Moreover, the i'th component distribution of $Y_j$ is modeled by: 
+
+$$
+Y_j = AU_{ij} + e_{ij}
+$$
+with probability $pi_i$ for $i = 1,2,..,g$, $j = 1,...,n$. The factors $U_{i1},..,U_{in}$ are distributed independently $N(\xi_i, \Omega_i)$, independently of $e_{ij}$ which again are distributed independently $N(0, D)$. 
+
+
+## b)
+
+Before we can fit the models, we have to load the data:
+```{r}
+wine <- read.table('wine.data',sep=',')
+wine_2 <- subset(wine, select = -c(1)) #exclude labels 
+```
+The dataset has n = 178 observations. 
+
+#### (i)
+
+Furthermore, we can now fit the 12 different models. This is done through a for-loop below:
+```{r echo = T, results = 'hide', cache=TRUE}
+mfa.models = list()
+mcfa.models = list()
+
+for (q in 1:6) {
+  mfa.models[[q]] = mfa(wine_2, g = 3, q)
+  mcfa.models[[q]] = mcfa(wine_2, g = 3, q, itmax = 200, init_method = "eigen-A")
+}
+```
+
+Firstly, the output from the different mfa models can be seen below. What each output parameter mean is briefly explained in a(i) and (ii). 
+
+q = 1: 
+```{r}
+mfa.models[[1]]
+```
+q = 2:
+```{r}
+mfa.models[[2]]
+```
+q = 3:
+```{r}
+mfa.models[[3]]
+```
+q = 4:
+```{r}
+mfa.models[[4]]
+```
+q = 5:
+```{r}
+mfa.models[[5]]
+```
+q = 6:
+```{r}
+mfa.models[[6]]
+```
+
+Secondly,the mcfa outputs are shown below:
+
+q = 1:
+```{r}
+mcfa.models[[1]]
+```
+
+q = 2: 
+```{r}
+mcfa.models[[2]]
+```
+
+q = 3: 
+```{r}
+mcfa.models[[3]]
+```
+
+q = 4:
+```{r}
+mcfa.models[[4]]
+```
+q = 5: 
+```{r}
+mcfa.models[[5]]
+```
+q = 6: 
+```{r}
+mcfa.models[[6]]
+```
+
+#### (ii) Error rate and BIC:
+
+##### For q=1:
+
+mfa:
+```{r}
+mfa.models[[1]]$BIC
+classError(mfa.models[[1]]$clust, wine$V1)$errorRate
+```
+
+mcfa:
+```{r}
+mcfa.models[[1]]$BIC
+classError(mcfa.models[[1]]$clust, wine$V1)$errorRate
+```
+
+
+##### For q=2:
+
+mfa:
+```{r}
+mfa.models[[2]]$BIC
+classError(mfa.models[[2]]$clust, wine$V1)$errorRate
+```
+
+mcfa:
+```{r}
+mcfa.models[[2]]$BIC
+classError(mcfa.models[[2]]$clust, wine$V1)$errorRate
+```
+
+##### For q=3:
+
+mfa:
+```{r}
+mfa.models[[3]]$BIC
+classError(mfa.models[[3]]$clust, wine$V1)$errorRate
+```
+
+mcfa:
+```{r}
+mcfa.models[[3]]$BIC
+classError(mcfa.models[[3]]$clust, wine$V1)$errorRate
+```
+
+
+##### For q=4:
+
+mfa:
+```{r}
+mfa.models[[4]]$BIC
+classError(mfa.models[[4]]$clust, wine$V1)$errorRate
+```
+
+mcfa:
+```{r}
+mcfa.models[[4]]$BIC
+classError(mcfa.models[[4]]$clust, wine$V1)$errorRate
+```
+
+##### For q=5:
+
+mfa:
+```{r}
+mfa.models[[5]]$BIC
+classError(mfa.models[[5]]$clust, wine$V1)$errorRate
+```
+
+mcfa:
+```{r}
+mcfa.models[[5]]$BIC
+classError(mcfa.models[[5]]$clust, wine$V1)$errorRate
+```
+
+##### For q=6:
+
+mfa:
+```{r}
+mfa.models[[6]]$BIC
+classError(mfa.models[[6]]$clust, wine$V1)$errorRate
+```
+
+mcfa:
+```{r}
+mcfa.models[[6]]$BIC
+classError(mcfa.models[[6]]$clust, wine$V1)$errorRate
+```
+
+
+Of the mfa models, the model with q=3 has the least BIC (BIC = 7034.175). The error rate of the mfa models is the least for the model with q=4 (error rate = 0.005617978). On the other hand, the mcfa model with the least BIC is the model with q = 6 (BIC = 6914.808). The smallest error rate comes from the model with q = 4 (error rate = 0.05617978). Comparing both, we see that the overall smallest BIC comes from the mcfa models, while the smallest error rate comes from the mfa model. 
+
+#### (iii) Plot MCFA clusters for q=2:
+
+```{r echo = T, results = 'hide'}
+model <- mcfa(wine_2, g = 3, q = 2, itmax = 200, init_method = "eigen-A")
+```
+```{r}
+plot_factors(model, type = "Umean")
+```
+
+
+
+The plot on the bottom left shows the clustering from the mcfa model. Next, we make a plot with the real labels shown:
+
+```{r}
+plot_factors(model, type = "Umean", clust = wine$V1) #wine$V1 show real labels. 
+```
+
+One can see from the plot above that that there are some misclassifications in our mcfa model, as some dots are classified with the wrong color compared to the real labelling.    
+
+## c) 
+
+### (i) 
+
+Now, the goal is to use PCA to reduce dimentionality before we fit a mixture model using Mclust. We use the PCA function from the FactoMineR-package. 
+
+```{r, echo = FALSE}
+pca.model <- PCA(wine_2, ncp = 2)
+pca.data <- pca.model$ind$coord
+```
+A visualization is shown below: 
+
+```{r}
+fviz_pca_ind(pca.model, label = "none")
+```
+
+Now that we have our PC's, we can fit our mixture model. The parameter values are shown below.
+```{r}
+mixture.pca <- Mclust(data = pca.data, G = 3)
+
+mixture.pca$parameters
+```
+
+### (ii) Misclassification rate:
+
+We can plot the misclassification rate, like we did in b(ii): 
+```{r}
+classError(mixture.pca$classification, wine$V1)$errorRate
+```
+The error rate in this case is larger than the smallest error rate from b(ii) given by the mfa model with q = 2 (error rate = 0.005617978). Hence, fewer misclassifications occur when using mfa on the wine dataset.  
+
+### (iii)
+
+Now we compare the PC-method to the mcfa by plotting both. Each point show the true class of origin. 
+
+```{r}
+plot(mixture.pca, what = "classification", col = wine$V1)
+```
+
+```{r}
+plot(model, col = wine$V1)
+```
+
+These two plots are quite different, as the mcfa model with q = 2 gives a linear shaped graph whereas the PC mixture model returns a cluster structure. Each plot show the class of origin for each point. In the PC plot, one can see that the three classes are clearly separated from each other. On the other hand, the classes in the mcfa are somewhat overlapping.

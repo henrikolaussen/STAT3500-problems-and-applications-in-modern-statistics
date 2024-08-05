@@ -1,0 +1,301 @@
+\documentclass[10pt]{article}
+\usepackage{blindtext}
+\usepackage{geometry}
+ \geometry{
+ a4paper,
+ total={170mm,257mm},
+ left=15mm,
+ right=15mm,
+ top=15mm,
+ footskip = 10mm,
+ bottom=17mm
+ }
+\usepackage[utf8]{inputenc}
+\usepackage{float}
+\usepackage{relsize}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage[hidelinks]{hyperref}
+\usepackage{amsthm}
+\usepackage[utf8]{inputenc}
+\usepackage{caption}
+\usepackage{bm}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algcompatible}
+\usepackage{listings} 
+\usepackage[]{algpseudocode}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\newcommand{\pr}{\mathbb{P}}
+\newcommand{\tpr}{\tilde{\mathbb{P}}}
+\newcommand{\ex}{\mathbb{E}}
+\newcommand{\ds}{\displaystyle}
+\newcommand{\floor}[1]{\lfloor #1 \rfloor}
+\newcommand{\exyg}{\ex \left[Y|\cG \right]}
+\usepackage{pdfpages}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\lstset{
+  language=python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  backgroundcolor=\color{backcolour},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+\newcommand{\bb}[1]{\mathbb{#1}}
+\newcommand{\indsim}{\stackrel{\mathrm{ind}}{\sim}}
+\newcommand{\simind}{\indsim}
+\newcommand{\simindt}{{\:{\sim}_{\mathrm{ind}}\:}}
+\newcommand{\sgn}{\mathrm{sgn}}
+\newcommand{\la}{\leftarrow}
+\newcommand{\st}{\: : \:} % such that
+\renewcommand{\v}[1]{\boldsymbol{#1}}
+\newcommand{\bincof}[2]{{{#1} \choose {#2}}}
+\newcommand{\dotsim}{\stackrel{\centerdot}{\sim}}
+\renewcommand{\le}{\leq}
+\renewcommand{\ge}{\geq}
+\renewcommand{\tilde}{\widetilde}
+\newcommand{\bnu}{\vect{\nu}}
+\newcommand{\btheta}{\vect{\theta}}
+\newcommand{\blambda}{\vect{\lambda}}
+\newcommand{\balpha}{\vect{\alpha}}
+\newcommand{\halmos}{\vspace{3mm} \hfill \mbox{$\Box$}}
+\newcommand{\bE}{\v{E}}
+\newcommand{\ba}{\v{a}}
+\newcommand{\bh}{\v{h}}
+\newcommand{\bfb}{\v{b}}
+\newcommand{\bA}{\v{A}}
+\newcommand{\bM}{\v{M}}
+\newcommand{\bN}{\v{N}}
+\newcommand{\bc}{\v{c}}
+\newcommand{\bbf}{\v{f}}
+\newcommand{\bd}{\v{d}}
+\newcommand{\bD}{\v{D}}
+\newcommand{\bw}{\v{w}}
+
+\newcommand{\Var}{\mathbb{V}\text{ar}}
+
+\newcommand{\Cov}{\mathbb{C}\mathrm{ov}}
+\newcommand{\cov}{\Cov}
+
+\newcommand{\Supp}{\mathrm{Supp}}
+\newcommand{\matlab}{\mathrm{M}\mathrm{{\scriptstyle ATLAB}}}
+
+
+\newcommand{\bp}{\v{p}}
+\newcommand{\bC}{\v{C}}
+\newcommand{\bii}{\v{i}}
+\newcommand{\bjj}{\v{j}}
+\newcommand{\bII}{\v{I}}
+\newcommand{\bv}{\v{v}}
+
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\rho}{\varrho}
+\renewcommand{\log}{\ln}
+\renewcommand{\hat}{\widehat}
+\renewcommand{\leq}{\leqslant}
+\renewcommand{\geq}{\geqslant}
+
+\newcommand{\argmax}{\mathop{\rm argmax}}
+\newcommand{\argmin}{\mathop{\rm argmin}}
+
+\newcommand{\iid}{\text{iid }}
+
+
+% Bernoulli distribution
+\newcommand{\Ber}{{\sf Ber}}
+\newcommand{\ber}{\Ber}
+
+% Erlang distribution
+\newcommand{\Erl}{{\sf Erl}}
+\newcommand{\erl}{\Erl}
+
+% Binomial distribution
+\newcommand{\Bin}{{\sf Bin}}
+\newcommand{\bin}{\Bin}
+
+% Cauchy distribution
+\newcommand{\Cauchy}{{\sf Cauchy}}
+\newcommand{\cauchy}{\Cauchy}
+
+% Negative binomial distribution
+\newcommand{\NegBin}{{\sf NegBin}}
+\newcommand{\negbin}{\NegBin}
+\newcommand{\negBin}{\NegBin}
+\newcommand{\Negbin}{\NegBin}
+\newcommand{\nbin}{\NegBin}
+\newcommand{\Nbin}{\NegBin}
+\newcommand{\NBin}{\NegBin}
+
+% Multinomial distribution
+\newcommand{\Mnom}{{\sf Mnom}}
+\newcommand{\mnom}{\Mnom}
+
+% Geometric distribution
+\newcommand{\Geo}{{\sf Geom}}
+\newcommand{\geo}{\Geo}
+\newcommand{\Geom}{\Geo}
+\newcommand{\geom}{\Geo}
+\newcommand{\G}{\Geo}
+\newcommand{\NE}{{\sf NE}}
+
+% Hypergeometric distribution
+\newcommand{\Hyp}{{\sf Hyp}}
+
+% Poisson distribution
+\newcommand{\Poi}{{\sf Poi}}
+\newcommand{\poi}{\Poi}
+\newcommand{\Po}{\Poi}
+\newcommand{\po}{\Poi}
+
+% Uniform distribution (continuous)
+%\newcommand{\U}{{\sf Unif}}
+\newcommand{\U}{\EuScript{U}}
+% Exponential distribution
+\newcommand{\Ex}{{\sf Exp}}
+
+
+% Normal / Gaussian distribution
+\newcommand{\Nor}{\EuScript{N}}
+\newcommand{\nor}{\Nor}
+
+
+% Pareto distribution
+\newcommand{\Pareto}{{\sf Pareto}}
+\newcommand{\pareto}{\Pareto}
+\newcommand{\ParetoI}{{\sf ParetoI}}
+
+% Beta distribution
+\newcommand{\Bet}{{\sf Beta}}
+\newcommand{\bet}{\Bet}
+
+% Weibull distribution
+\newcommand{\Weib}{{\sf Weib}}
+\newcommand{\weib}{\Weib}
+
+% Discrete uniform distribution
+\newcommand{\DU}{{\sf DU}}
+
+% Gamma distribution
+\newcommand{\gam}{\sf Gamma}
+
+% Generic distribution
+\newcommand{\Dist}{{\sf Dist}}
+
+
+\newcommand{\Em}{{\mathbb E}}
+\newcommand{\Pm}{{\mathbb P}}  % was necessary! else strange
+                               % bugs. maybe needed below as well.
+\newcommand{\R}{{\mathbb R}}
+\newcommand{\Rbar}{\overline{\mathbb R}}
+
+\newcommand{\B}{{\cal B}}
+\newcommand{\cB}{{\cal B}}
+\newcommand{\cG}{{\cal G}}
+\newcommand{\cA}{{\cal A}}
+\newcommand{\cE}{{\cal E}}
+\newcommand{\cD}{{\cal D}}
+\newcommand{\cN}{{\cal N}}
+\newcommand{\cF}{{\cal F}}
+\newcommand{\F}{\mathbb F}
+\newcommand{\N}{\mathbb N}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\C}{\mathbb C}
+
+\newcommand{\scA}{\mathscr{A}}
+\newcommand{\scB}{\mathscr{B}}
+\newcommand{\scC}{\mathscr{C}}
+\newcommand{\scD}{\mathscr{D}}
+\newcommand{\scF}{\mathscr{F}}
+\newcommand{\scG}{\mathscr{G}}
+\newcommand{\scH}{\mathscr{H}}
+\newcommand{\scI}{\mathscr{I}}
+\newcommand{\scJ}{\mathscr{J}}
+\newcommand{\scL}{\mathscr{L}}
+\newcommand{\scM}{\mathscr{M}}
+\newcommand{\scP}{\mathscr{P}}
+\newcommand{\scS}{\mathscr{S}}
+\newcommand{\scR}{\mathscr{R}}
+\newcommand{\scU}{\mathscr{U}}
+\newcommand{\scE}{\mathscr{E}}
+\newcommand{\scT}{\mathscr{T}}
+\newcommand{\scV}{\mathscr{V}}
+\newcommand{\scW}{\mathscr{W}}
+\newcommand{\scX}{\mathscr{X}}
+\newcommand{\scY}{\mathscr{Y}}
+\newcommand{\scZ}{\mathscr{Z}}
+
+\newcommand{\gvn}{\,|\,}
+
+
+\newcommand{\bs}{\boldsymbol}
+
+
+\title{STAT3500 Assignment 1}
+\author{{Insert Name}}
+\date{Due 25th August 2023}
+
+\begin{document}
+
+\maketitle
+
+\begin{enumerate}[label=\textbf{\alph*)}]
+    \item \text{[15 marks]}\\
+    Consider an observed random sample of size $n$; $w_1, \dots, w_n$, from a normal distribution $N(\mu, \sigma^2)$. \\
+    \\
+    To the 75 observations in the dataset Data-A1a.csv, apply the EM algorithm to fit via maximum likelihood the two-component normal mixture density with common variances,
+    \[ f(w; \bs \Psi) = \ds \sum_{i=1}^2 \pi_i \phi(w; \mu_i, \sigma^2)\]
+    where 
+    \[ \phi(w; \mu, \sigma^2) = (2\pi \sigma^2)^{-1/2} \exp \left\{-\frac{1}{2}\dfrac{(w - \mu)^2}{\sigma^2} \right\}\]
+    and 
+    \[ \bs \Psi = (\pi_1, \mu_1, \mu_2, \sigma^2)^T\]
+    To this end,
+    \begin{enumerate}[label=\textbf{(\roman*)}]
+        \item \text{[1/2 marks]} Specify the EM framework\\
+        \item \text{[1/2 marks]} Write down the expressions for the E- and M-steps. on the ($k$ + 1)th iteration of the EM algorithm.\\
+        \item \text{[3 marks]} Use an available program to fit this mixture model via the EM algorithm such as MClust, FlexMix, and EMMIX, which may be found on CRAN. Explicitly give the starting or starting points tried in your fitting of the EM algorithm and the stopping criterion adopted.\\
+        \item \text{[3 marks]} Let $\hat{\bs \Psi}$ be the ML estimate of $\bs \Psi$ obtained in (a) above. Plot the fitted two-component normal mixture density $f(w; \hat{\Psi})$ on top of a histogram of the $n$ = 75 data points.\\
+        \\
+        Choose the number of bins $N$ of the histogram by consideration of 
+        \[ n \approx 2^{N-1}\]
+        and / or using the formula,
+        \[ \text{bin width } \approx \dfrac{2 \times \text{Sample IQR}}{n^{1/2}}\]
+        to guide in the chose of the number of bins $N$.\\
+        \item \text{[2 marks]} Carry out a chi-squared goodness-of-fit test to assess the adequacy of the fit of the two component normal mixture model with common variances to the $n$ = 75 data points.\\
+        \item \text{[2 marks]} Fit to this dataset by maximum likelihood via the EM algorithm a two-component normal mixture model with now unequal component variances. Take the component variances to be arbitrary (that is, do not constrain them to be equal now) so that this mixture density is given by
+         \[ f(w; \bs \Psi) = \ds \sum_{i=1}^2 \pi_i \phi(w; \mu_i, \sigma_i^2)\]
+         where
+         \[ \bs \Psi = (\pi_1, \mu_1, \mu_2, \sigma_1^2, \sigma_2^2)^T\]
+        \item \text{[2 marks]} Use the nonparametric bootstrap to obtain standard errors of the estimates so obtained for the parameters $\pi_1, \mu_1, \mu_2, \sigma_1^2$ and $\sigma_2^2$\\
+        \item \text{[2 marks]} Use the parametric bootstrap to obtain standard errors of the estimates so obtained for the parameters $\pi_1, \mu_1, \mu_2, \sigma_1^2$ and $\sigma_2^2$
+    \end{enumerate}
+    \item \text{[10 marks]}\\
+    Consider the dataset Data-A1b.csv with $n = 100$ four-dimensional observations.
+     \begin{enumerate}[label=\textbf{(\roman*)}]
+        \item \text{[4 marks]} Fit a g-component normal mixture model with a common covariance matrix for its four-dimensional components for $g$ = 1, $g$ = 2, and $g$ = 3. Plot the clusters obtained for $g$ = 2 and $g$ = 3 in separate figures, displaying two of the variables at a time in each plot.\\
+        \item \text{[2 marks]} Carry out a test of exact size 0.05 of the null hypothesis $H_0$ : $g$ = 1 versus $H_1$ : $g$ = 2 using a resampling approach.\\
+        \item \text{[2 marks]} Use the bootstrap with $B = 99$ bootstrap replications to test the null hypothesis $H_0: g = 2$ versus $H_1: g = 3$.\\
+        \item \text{[2 marks]} Use the Bayesian information criterion (BIC) to decide on the choice between $g = 2$ and $g = 3$ components.
+     \end{enumerate}
+\end{enumerate}
+
+\end{document}

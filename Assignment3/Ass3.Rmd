@@ -1,0 +1,470 @@
+---
+title: "Assignment 3"
+author: "Henrik Olaussen"
+date: "2023-10-08"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(datasets)
+library(lmtest)
+library(sandwich)
+library(openintro)
+library(MASS)
+library(car)
+data("babies")
+data("chickwts")
+data("GAGurine")
+data("satgpa")
+```
+
+## Problem 1
+
+### a)
+
+Have that
+
+$$E[Y \mid X = x] = \beta_0 + \beta_1x^{(1)} + ...+ \beta_kx^{(k)}$$
+
+where $x^{(k)} = 1$ if $x = k$, and  $x^{(k)} = 0$ if $x \neq k$. Furthermore, this can be written as: 
+
+$$
+E[Y \mid X = x] = \beta_0 + \boldsymbol{\beta}^T \boldsymbol{x}
+$$
+with $\boldsymbol{\beta}^T = (\beta_1, \beta_2,..., \beta_k)$ and $\boldsymbol{x} = (x^{(1)}, x^{(2)},...,x^{(k)})^T$. We can think of $\beta_0$ as our base case when all entries of $\boldsymbol{x}$ are $0$, or as the intercept of our regression. The values of $\boldsymbol{\beta}$ are the slope coefficients in our regression. These entries are also refered to as the regression coefficients, in which we have to estimate. The $\beta_i$'s hold information about the rate of change per unit of each respective $x^{(k)}$, relative to the other entries of $\boldsymbol{x}$ and the response. However, as we have categorical values, $\beta_i$ represent the difference between the two cases, $x^{(k)} = 0$ and $x^{(k)} = 1$. The model has the following form for different values of $x$: \
+
+$\underline{x = 0}:$
+$$E[Y \mid X = 0] = \beta_0$$
+$\underline{x = 2}:$
+$$E[Y \mid X = 2] = \beta_0 + \beta_2$$
+$\underline{x = k}:$
+$$E[Y \mid X = k] = \beta_0 + \beta_k$$
+
+### b)
+
+First, we have to convert the data to the desired format:
+
+```{r}
+data = chickwts
+
+?chickwts
+
+y = data$weight
+data$x = as.numeric(factor(data$feed))-1
+x = data$x 
+
+for (i in 1:5) {
+  name = paste("x", i, sep="")
+  assign(name, ifelse(x == i, 1,0))
+}
+
+rm(name)
+
+model1 <- lm(y ~ factor(x1) + factor(x2) + factor(x3) + factor(x4) + factor(x5), data = data)
+summary(model1)
+```
+
+The linear model has been fitted above. The output shows the estimates of $\boldsymbol{\theta}^{*T}$, where $\hat{\beta}_0$ is given by 'intercept', and the estimated sigma, $\hat{\sigma}$, is given by 'Residual standard error'. The estimated values gives the predicted weight of a chicken relative to the base case when they have been fed by one of the feed types. For example, the estimated value is -163.383g relative to the base case if the feed type is $x^{(1)}$. This means that the weight in grams of a chicken that is fed by the feed type corresponding to x1, which is horsebean, has a weight of 163.383g less than the base case (intercept). Furthermore, we want to test independence of X and Y. The following test is performed: \
+
+$H_0:$ Y is independent of X vs $H_1:$ X and Y are dependent, or equivalently $H_0: \boldsymbol{\beta^*} = 0$ vs $H_1: \boldsymbol{\beta^*} \neq 0$. The significance level for this test is $\alpha = 0.01$. A $\chi^2$ test is carried out below:
+
+
+```{r}
+waldtest(model1, test = 'Chisq')
+```
+
+From the output of the test, one can see that the p-value is very small (much smaller than 0.01). Consequently, there are evidence against $H_0$. Hence, the conclusion is that at least one of the entries in $\boldsymbol{\beta}^*$ is not 0, indicating that there is dependence between $X$ and $Y$. 
+ 
+### c) 
+
+Now we have a misspecified model for some $\boldsymbol{\theta^*}$. However, the estimate of $\boldsymbol{\theta^*}$ will still be the same. 
+```{r}
+waldtest(model1, test = 'Chisq', vcov = sandwich)
+```
+
+The p-value is still very small. Hence, there is still evidence that $X$ and $Y$ are dependent. 
+
+### d) 
+
+Now, we have a different model involving both categorical variables $U$ and a real random variable $V$, meaning $\boldsymbol{X}^T = (U,V)$. This model also includes an interaction term between U and V, given by $\sum_{k=1}^{\kappa}\delta_ku^{(k)}v$ for $U = u$ and $V = v$. The value $\delta_k$ tells us how big of an influence the interaction between $u^{(k)}$ and $v$ has on the response Y. The relationship is modeled as: 
+
+$E[Y \mid \boldsymbol{X} = (u,v)] = \beta_0 + \sum_{k=1}^{\kappa}\beta_ku^{(k)} + \gamma v + \sum_{k=1}^{\kappa}\delta_ku^{(k)}v$. \
+
+$\underline{(u,v) = (0,v)}:$
+$$E[Y \mid  \boldsymbol{X} = (0,v)] = \beta_0 + \gamma v$$ 
+
+$\underline{(u,v) = (1,v)}:$
+$$E[Y \mid  \boldsymbol{X} = (1,v)] = \beta_0 + \beta_1u^{(1)} + \gamma v + \delta_1u^{(1)}v$$
+
+$\underline{(u,v) = (k,v)}$, for some $k \in \{0,1,...,\kappa\}$:
+$$E[Y \mid \boldsymbol{X} = (k,v)] = \beta_0 + \beta_ku^{(k)} + \gamma v + \delta_ku^{(k)}v$$
+
+### e) 
+
+Firstly, we fit the new linear model to the babies data set:
+```{r}
+data2 = na.omit(babies) #delete rows with NA values
+
+model2 = lm(bwt ~ as.factor(smoke) + gestation + as.factor(smoke):gestation, data = data2)
+
+summary(model2)
+```
+The estimated value of $\delta_1^{*}$, $\hat{\delta_1}$, is 0.23085. Secondly, we want to test if $Y$ is dependent on $U$. This is done through the following test: \
+
+$H_0$: $Y$ is independent of $U$ ($\delta_1^*$ and $\beta_1^*$ are equal to 0) \
+vs $H_1$ : $Y$ and $U$ are dependent (At least one of $\delta_1^*$ and $\beta_1^*$ is not 0). \
+By passing in the models $\{Y \mid \boldsymbol{X} = (u,v) \} = \beta_0 + \beta_1 u^{(1)} + \gamma v + \delta_1u^{(1)}v$ and $\{Y \mid X = v \} = \beta_0 + \gamma v$ to waldtest(), the mentioned test is performed. In addition, to correct for misspecification, the argument vcov = sandwich is passed in as well. 
+
+```{r}
+model2_test = lm(bwt ~ gestation, data = data2)
+
+waldtest(model2_test, model2, vcov = sandwich, test = 'Chisq')
+```
+
+
+The result of the test is shown above. The p-value of the test is much smaller than the significance level of 0.01. Hence there is evidence that $H_0$ should be discarded. In other words, the test gives evidence that the weight of a baby is dependent on whether the mother smokes or not. 
+
+Thirdly, if the mother is a smoker, the resulting estimated formula is: 
+
+$$\{Y \mid \boldsymbol{X}=(1,v)\} = 19.63964 - 72.68713 + 0.36962v + 0.23085v $$
+
+## Problem 2
+
+### a) 
+
+Estimate the parameter:
+```{r}
+data3 = GAGurine
+model3 = lm(GAG ~., data = data3)
+
+summary(model3)
+```
+
+Next, we test if there is a decreasing relationship between GAG and Age, using the following hypothesizes at significance level 0.05: \
+
+$H_0 :$ There is no decreasing relationship between GAG and Age ($\beta_1 = 0$) \
+vs $H_1 :$ There is a decreasing relationship ($\beta_1 < 0$). \
+Moreover, this is an one-sided hypothesis test, meaning we have to divide the p-value by 2 since the waldtest() returns a two-sided test. 
+
+
+```{r}
+waldtest(model3, vcov = sandwich)
+```
+
+Since the p-value is very small (dividing by 2 will not change the conclusion), $H_0$ will be discarded at the 0.05 level. Consequently, there is evidence that there is a negative relationship between GAG and Age. 
+
+
+#### b) 
+
+Moreover, one can test non-linearity. The following test is performed: 
+$$
+H_0: \{Y \mid X = x \} = \beta_0^* + \beta_1^*x + E
+$$
+vs
+$$
+H_1 : \{Y \mid X = x \} = \beta_0^* + \beta_1^*x + \beta_2^{*2}x + \beta_3^{*3}x + \beta_4^{*4}x
+$$
+
+```{r}
+model3_nonlin = lm(GAG ~ Age + I(Age^2) + I(Age^3) + I(Age^4), data = data3)
+
+waldtest(model3, model3_nonlin, test = 'Chisq', vcov = sandwich)
+```
+
+
+As the p-value is very small, we reject $H_0$. This means that the conclusion is that the non-linear model is better. 
+
+
+### c) 
+
+There are some assumptions made such that the test statistic in b) has the necessary regularity to be asymptotically normal. Firstly, some conditions are needed for the sample risk to converge, uniformly almost-surly, to the risk. The risk is the expected loss (wrt some loss function) of approximating Y. In this case, Y has been approximated as $\beta_0 + \beta_1x + \beta_2^{2}x + \beta_3^{3} + \beta_4^{4}$. For example,  the betas that are used in linear regression, $\beta^* \in \theta^*$, are the betas that minimize this risk (called the least square estimator). More general, the parameters that minimize the risk are denoted $\theta^*$. However, in real life, the parameter values, such as $\beta^* \in \theta^*$ must be obtained from the observed data. In other words,the estimated parameters $\hat{\theta_n}$ are obtained by minimizing the sample risk instead. The sample risk is a sum over the observed losses (loss using the observed data). Moreover, the following assumptions are needed: \
+
+1. The data $\mathcal{D}_n$ consists of IID samples. \
+2. The set $\mathbb{T} \in \mathbb{R}^l$ is compact. Here, $\mathbb{T}$ is some parameter space. \
+3. The loss $\ell$ is Caratheodory, meaning $\ell(\cdot, \cdot ; \boldsymbol{\theta})$ is measurable for each fixed $\boldsymbol{\theta} \in \mathbb{T}$, and $\ell(\boldsymbol{x}, y; \cdot)$ is continuous for each fixed $\boldsymbol{x} \in \mathbb{R}^m$ and $y \in \mathbb{R}$ \
+4. The loss is dominated in the sense that 
+$$
+\left| \ell(\boldsymbol{X}, Y ; \boldsymbol{\theta}) \right| \leq \Delta(\boldsymbol{X}, Y)
+$$
+for all $\boldsymbol{\theta} \in \mathbb{T}$, some dominating function $\Delta$, in the sense that 
+$$
+E[\Delta(\boldsymbol{X}, Y)] < \infty
+$$
+
+If in addition, the risk has a unique minimizer on $\mathbb{T}$, and the conditions above holds, then the sample risk converges almost surly to the risk. Furthermore, to assure asymptotic normality, we have the additional assumptions: \
+
+1. The data consists of IID samples. \
+2. For fixed $\boldsymbol{x}$ and $y$, the loss has all of its first three partial derivatives (i.e. can be differentiated three times) on some open set $\mathbb{S} \in \mathbb{T}$ and $\boldsymbol{\theta}^* \in \mathbb{T}$, satisfying 
+$$
+E[\partial_{\boldsymbol{\theta}} \ell(\boldsymbol{X}, Y, \cdot)(\boldsymbol{\theta}^*)] = 0
+$$
+
+3. In a neighborhood of $\boldsymbol{\theta}^*$, there exists a dominating function $\Delta(\boldsymbol{X}, Y)$, such that 
+$$
+\sum_{i,j,k}\left|\frac{ \partial^3}{\partial \theta_i \partial \theta_j \partial \theta_k}  \ell(\boldsymbol{X}, Y; \theta) \right| \leq \Delta(\boldsymbol{X}, Y)
+$$
+in the sense that $E[\Delta(\boldsymbol{X}, Y)] < \infty$. \
+
+4. The matrix 
+$$
+\boldsymbol{A}(\boldsymbol{\theta}^*) = E \left [ - \frac{\partial^2\ell(\boldsymbol{X}, Y; \cdot)}{\partial \boldsymbol{\theta} \partial \boldsymbol{\theta}^T} \right ]
+$$
+exists and is non-singular. \
+5. The matrix
+$$
+\boldsymbol{B}(\boldsymbol{\theta^*}) = E\left [  \{\partial_{\boldsymbol{\theta}} \ell(\boldsymbol{X}, Y; \cdot) (\boldsymbol{\theta^*}) \}\{\partial_{\boldsymbol{\theta}} \ell(\boldsymbol{X}, Y; \cdot) (\boldsymbol{\theta^*}) \} \right ]
+$$
+exists. \
+6. The sequence $\hat{\boldsymbol{\theta}}_1, \hat{\boldsymbol{\theta}}_2,...$ satisfies the consistency condition 
+$$
+\hat{\boldsymbol{\theta}}_n \xrightarrow[n\rightarrow \infty]{a.s} \boldsymbol{\theta}^*
+$$
+and 
+
+$$
+\frac{1}{\sqrt{n}}\partial_{\boldsymbol{\theta}}r_n(\cdot;\mathcal{D}_n)(\hat{\boldsymbol{\theta}}_n) \xrightarrow[n\rightarrow \infty]{a.s} \boldsymbol{0}
+$$
+
+### d)
+
+One can perform another test than the test performed in b). For, example one can perform the likelihood ratio test using the 'lrtest' function:
+```{r}
+lrtest(model3, model3_nonlin)
+```
+
+One can see that the p-value is very small, meaning we reject $H_0$. In other words, the test give the same result as in b), namely that the non-linear model is better. 
+
+## Problem 3
+
+### a) 
+
+First, we fit the model:
+```{r}
+data4 = satgpa
+model4 = lm(fy_gpa ~ sat_sum + hs_gpa, data = data4)
+
+summary(model4)
+```
+
+And then we use a built-in function to find the CI for each parameter at the $1-\alpha = 0.9$ level.
+```{r}
+alpha = 0.1
+coefci(model4, vcov = sandwich, level = 1-alpha)
+```
+
+### b) 
+Now, the goal is to produce an asymptotic $100(1-\alpha)\%$ confidence set $\mathbb{C}_{\alpha, n}$, such that 
+$$
+P((\beta_1^*, \beta_2^*) \in\mathbb{C}_{\alpha, n}) \geq 1- \alpha
+$$
+at the $1-\alpha = 0.9$ level. Firstly, we have \
+
+$$
+P((\beta_1^*, \beta_2^*) \in\mathbb{C}_{\alpha, n}) = P(\beta_1^* \in \mathbb{I}_{\alpha,n}^1 \cap \beta_2^* \in \mathbb{I}_{\alpha, n}^2) \geq 1 - (1 - P(\beta_1^* \in \mathbb{I}_{\alpha,n}^1)+(1-P(\beta_2^* \in \mathbb{I}_{\alpha, n}^2))) 
+$$
+where $\mathbb{I}_{\alpha.n}^k$ is the $(1-\alpha)100\%$ confidence interval for the k'th parameter $\beta_k^*$. In the last inequality, we have applied the Bonferroni inequality. Moreover, by evaluating each confidence interval at the $(1-\alpha)100\%$ level, $P(\beta_k^* \in \mathbb{I}_{\alpha, n}^k) \geq 1-\alpha$, we have that:
+$$
+1 - (1 - P(\beta_1^* \in \mathbb{I}_{\alpha,n}^1)+(1-P(\beta_2^* \in \mathbb{I}_{\alpha, n}^2))) \geq 1-2\alpha
+$$
+Hence, by evaluating each $\beta_k^*$ at a $(1-\alpha/2)100\%$ confidence interval, we evaluate $(\beta_0^*, \beta_1^*)$ at the $(1-\alpha)100\%$. Consequently, we have that 
+$$\mathbb{C}_{\alpha,n} = \mathbb{I}_{\alpha/2, n}^1 \times \mathbb{I}_{\alpha/2, n}^2 \implies \mathbb{C}_{0.1,n} = \mathbb{I}_{0.05, n}^1 \times \mathbb{I}_{0.05, n}^2$$
+Where $\mathbb{I}_{0.05, n}^1$ and $\mathbb{I}_{0.05, n}^2$ is computed in the code chunk below. 
+
+```{r}
+coefci(model4, vcov = sandwich, level = 1-0.05)
+```
+
+As a result, we have:
+$$
+\mathbb{C}_{0.1,n} = \mathbb{I}_{0.05, n}^1 \times \mathbb{I}_{0.05, n}^2 = [0.01157352, 0.01723001] \times [0.49804814, 0.66092944]
+$$
+
+### c)
+
+Furthermore, we can construct an asymptotic $(1-\alpha)100\%$ confidence ellipse for the parameters $(\beta_0^*, \beta_1^*)$. From the lecture notes, we have that 
+$$
+[\hat{\beta_1}, \hat{\beta_2}]^T \overset{A}{\sim} N([\beta_1^*, \beta_2^*]^T, \frac{1}{n} \hat{C}(\hat{\beta_1}, \hat{\beta_2}))
+$$
+Where $\hat{C}(\beta_1^*, \beta_2^*)$ is the sandwich estimator. Moreover, we get that:
+
+$$
+n([\hat{\beta_1}, \hat{\beta_2}]^T - [\beta_1^*, \beta_2^*]^T)^T\hat{C}^{-1}(\hat{\beta_1}, \hat{\beta_2})([\hat{\beta_1}, \hat{\beta_2}]^T - [\beta_1^*, \beta_2^*]^T) \overset{A}{\sim} Q = \chi^2(2)
+$$
+We then get that: 
+$$
+P(Q \leq q_{2,1-\alpha}) \geq 1-\alpha
+$$
+Meaning that our confidence ellipse for $[\beta_0^*, \beta_1^*]^T$ is: 
+$$
+\mathbb{E}_{\alpha, n} = \{ [\beta_1, \beta_2] \in \mathbb{R}^2 : n([\hat{\beta_1}, \hat{\beta_2}]^T - [\beta_1, \beta_2]^T)^T\hat{C}^{-1}(\hat{\beta_1}, \hat{\beta_2})([\hat{\beta_1}, \hat{\beta_2}]^T - [\beta_1, \beta_2]^T)  \leq  q_{2,1-\alpha}\}
+$$
+Moreover, we have 
+$$
+n \begin{bmatrix} \hat{\beta_1}-\beta_1 & \hat{\beta_2}-\beta_2 \end{bmatrix}  \begin{bmatrix} \hat{C}_{11} & \hat{C}_{12} \\ \hat{C}_{21} & \hat{C}_{22} \\ \end{bmatrix}^{-1} \begin{bmatrix} \hat{\beta_1}-\beta_1 \\ \hat{\beta_2}-\beta_2 \end{bmatrix} \leq q_{2,1-\alpha}\ \\
+$$
+In the next derivation, the hats on the entries to the sandwich estimator has been dropped due to simplicity. 
+$$
+\frac{n}{C_{11}C_{22}-C_{12}C_{21}} ((\hat{\beta_1}-\beta_1)^2C_{22} + (\hat{\beta_2}-\beta_2)(\hat{\beta_1}-\beta_1)(-C_{21} - C_{12}) + (\hat{\beta_2}-\beta_2)^2C_{11}) \leq q_{2,1-\alpha} 
+$$
+$$
+\implies \frac{n}{C_{11}C_{22}-C_{12}C_{21}} \cdot \frac{1}{q_{2,1-\alpha}}((\hat{\beta_1}-\beta_1)^2C_{22} + (\hat{\beta_2}-\beta_2)(\hat{\beta_1}-\beta_1)(-C_{21}  - C_{12}) + (\hat{\beta_2}-\beta_2)^2C_{11}) \leq 1
+$$
+We find the values of the sandwich estimator by the following function: 
+```{r}
+sandwich(model4)
+```
+
+Moreover, the confidence ellipse can be plotted with the function 'confidenceEllipse'. The black lines shows the confidence set (from b) for $\beta_0^*$ (x-values) and the red lines for $\beta_1^*$ (y-values):
+
+```{r}
+confidenceEllipse(model4, vcov = sandwich, level = 0.9) 
+abline(a = 0.49804814, b = 0, lwd = 2, col = 'red')
+abline(a = 0.66092944, b = 0, lwd = 2, col = 'red')
+abline(v = 0.01157352, lwd = 2)
+abline(v = 0.01723001, lwd = 2)
+?confidenceEllipse
+```
+
+
+### d) 
+Next, we perform the hypothesis test:
+$$
+H_0: \{Y \mid \boldsymbol{X} = \boldsymbol{x}\} = \beta_0^* + \beta^*_1u+  \beta^*_2v + E
+$$
+vs
+$$
+H_1: \{Y \mid \boldsymbol{X} = \boldsymbol{x}\} = \beta_0^* + \beta^*_1u+  \beta^*_2v + \gamma^*uv + E
+$$
+
+First we fit the model including the interaction term:
+```{r}
+model4_alt = lm(fy_gpa ~ sat_sum + hs_gpa + sat_sum:hs_gpa, data = data4)
+
+summary(model4_alt)
+```
+
+And then we perform the test.
+```{r}
+waldtest(model4, model4_alt, vcov = sandwich, test = "Chisq")
+```
+
+At 0.1 level, we discard H0, meaning that at this level, the conclusion is that the alternative model (that includes the interaction term) is better. 
+
+
+## Problem 4
+
+### a) 
+
+```{r}
+data5 = gpa_study_hours
+model5 = lm(gpa ~., data = data5)
+
+summary(model5)
+```
+
+Interpretation of the value of $\beta_1^*$ is that for each additional unit(hour) of study, gpa increase by 0.003328. 
+
+### b) 
+
+As the error is $N(0,1)$, we have that $\{Y \mid X = x\} \sim N(\beta_0^* + \beta_1^*x, \text{ exp}(\gamma_0^* + \gamma_1^*x) )$. Moreover, increasing the value of $x$ by one unit gives: 
+
+$$\frac{ \text{exp} (\gamma_0^* + \gamma_1^*(x+1))}{\text{exp}(\gamma_0^* + \gamma_1^*x)} = \text{exp}(\gamma_1^*)$$
+
+In other words, increasing $x$ by one unit increases the variance with a factor of $\exp(\gamma_1^*)$. Hence, the value $\exp(\gamma_1^*)$ can be interpreted as the variance ratio as x increases with one unit. Larger values of $\gamma_1^*$ gives a larger ratio. If $\gamma_1^* < 0$, then  $\exp(\gamma_1^*) < 1$, meaning the variance decreases with x. 
+
+### c) 
+
+Next, one can estimate the parameter $\boldsymbol{\theta}^* = (\beta_0^*, \beta_1^*, \gamma_0^*,\gamma_1^*)$ by maximum likelihood estimation. The (conditional) pdf of $\{Y \mid X = x\}$ is $$f(y \mid x) = \frac{1}{\sqrt{2\pi \exp(\gamma_0^* + \gamma_1^*x)}} \exp\{-\frac{1}{2}(\frac{x- (\beta_0^* + \beta_1^*x)}{\sqrt{\exp(\gamma_0^* + \gamma_1^*x)}})^2\}$$
+
+
+```{r}
+Y_vec = matrix(gpa$gpa)
+X_vec = matrix(data5$study_hours)
+
+mean_ <- function(beta0, beta1, i) {
+  return(beta0 + beta1*X_vec[i])
+}
+
+var_ <- function(gamma0, gamma1, i) {
+  return(exp(gamma0 + gamma1*X_vec[i]))
+}
+
+objective <- function(parameter) { 
+  beta <- matrix(parameter[1:2], 2, 1)
+  gamma <- matrix(parameter[3:4], 2, 1)
+  
+  neg_log_like <- 0
+  n <- length(Y_vec)
+  
+  for (i in 1:n) {
+    mu = mean_(beta[1], beta[2], i)
+    sigma = sqrt(var_(gamma[1], gamma[2], i))
+    neg_log_like <- neg_log_like - (-0.5*log(2*pi)-0.5*log(sigma^2)-1/(2*sigma^2)*(Y_vec[i]-mu)^2)
+  }
+  neg_log_like <- neg_log_like / n
+  return(neg_log_like) 
+}
+
+Optimization <- optim(c(1, 1, 1, 1), objective, method = 'BFGS', control = list(maxit = 10000))
+
+print("Optimization Results:")
+print(Optimization)
+```
+
+The resulting parameters from the optimization are given above under $par in the following order: (beta0, beta1, gamma0, gamma1). 
+
+### d)
+
+Furthermore, one can test:  \
+$H_0 :$ variance of ${Y \mid X = x}$ is not a function of $x$ \
+vs \
+$H_1 :$ the variance of${Y \mid X = x}$ is a function of $x$. \
+
+In other words, we test whether $\gamma_1^*$ is 0 (indicating that the variance is not a function of x) or not (indicating that the variance is a function of x). We do this by performing a likelihood ratio test (LRT) with $\alpha = 0.01$. The test statistic is:
+$$
+\frac{\mathcal{L}_n(\hat{\beta_0}, \hat{\beta_1}, \gamma_0^*)}{\mathcal{L}_n(\beta_0^*, \beta_1^*, \gamma_0^*, \gamma_1^*)}
+$$
+Where $\mathcal{L}_n(\boldsymbol{\theta^*})$ is the likelihood function, and $\boldsymbol{\theta^*}$ is MLE of the respective hypothesis. Hence, the MLE of $H_0$ has to be calculated: 
+
+```{r}
+objectiveH0 <- function(parameter) { 
+  
+  neg_log_like <- 0
+  n <- length(Y_vec)
+  
+  for (i in 1:n) {
+    mu = parameter[1] + parameter[2] * X_vec[i]
+    sigma = sqrt(exp(parameter[3]))
+    neg_log_like <- neg_log_like - (-0.5*log(2*pi)-0.5*log(sigma^2)-1/(2*sigma^2)*(Y_vec[i]-mu)^2)
+  }
+  
+  neg_log_like <- neg_log_like / n
+
+  return(neg_log_like) 
+}
+
+OptimH0 <- optim(c(3,0,1), objectiveH0, method = 'BFGS', control = list(maxit = 10000))
+
+print("Optimization Results:")
+print(OptimH0)
+```
+
+Now, one can perform the LRT:
+
+```{r}
+LRT = -2 *log(exp(-OptimH0$value) / exp(-Optimization$value))
+LRT
+```
+
+The test statistic is given above. The test statistic is distributed as $\chi^2(l_1)$, where $l_1 = 2$. Hence, we have to find the $1-\alpha$-quantile of the $\chi^2(l_1)$ distribution. We reject $H_0$ if the statistic is larger than the given quantile:
+
+```{r}
+alpha = 0.01
+qchisq(1-alpha, df = 2)
+```
+
+As the statistic is smaller than the quantile value, $H_0$ is not rejected. Moreover, this means that according to this test, there is no evidence that the variance is a function of $x$. 
